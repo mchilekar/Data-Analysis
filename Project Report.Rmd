@@ -1,0 +1,324 @@
+---
+title: "Project Report"
+author: "Mayuri Rajendra Chilekar"
+date: "15/4/2023"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE, message = FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE)
+```
+
+## Abstract
+Early detection of diabetes is essential for maintaining good health as this metabolic disorder can have negative impacts on the entire body and increase the risk of related disorders like diabetic nephropathy and cardiac stroke.[1] This study analyzed a diabetes dataset obtained from a clinical study conducted on patients with diabetes at the Medical City Hospital laboratory. The aim was to explore the relationship between various features like age, BMI, blood pressure, glucose levels and the target variable, HbA1c. HbA1c is an important measure of the average blood sugar levels over the past few months. The study employed various statistical modeling techniques such as linear models, generalized linear models, and generalized additive models, along with descriptive and inferential statistics. The performance of the models was evaluated using metrics such as p-value and R-squared. The findings of this study could potentially aid in the early detection and management of diabetes, thereby improving patient outcomes and reducing the risk of related complications.
+
+## Keywords
+Diabetes, GLM, GAM, LM
+
+## Introduction
+Currently, in a global environment, there are so many chronic diseases that are disseminated around the world, both in developing and developed countries.Diabetes mellitus is one of the world's chronic diseases that shortens people's lives at a young age. Diabetes early prediction is a difficult undertaking for medical practitioners due to the complicated interplay of numerous elements. Diabetes affects around 422 million people globally, with the majority residing in low and middle-income countries, and diabetes is directly responsible for 1.5 million fatalities per year. Diabetes has been progressively increasing in both the number of cases and the prevalence during the last few decades.[2]As a result, this is a big concern, and raising awareness about this disease is critical.Different countries, organisations, and health sectors are concerned about this chronic disease control and prevention before the person dies, which is the early presentation of diabetes in order to save human life. To contribute to this effort, I analyzed a dataset of 1000 patients from a medical city hospital laboratory, which includes samples of diabetic, non-diabetic, and predicted-diabetic patients.My research questions focuses on identifying statistically significant predictors for the occurrence of diabetes in a patient. By analyzing the dataset, we can determine which variables have the most significant impact on the occurrence of diabetes, and use this information to develop early prediction models for the disease. This research question is critical because early diagnosis and treatment of diabetes are essential for preventing complications and improving patient outcomes. By identifying the most significant predictors of diabetes, we can develop more accurate prediction models, which can help healthcare providers diagnose the disease earlier and provide more targeted treatment.Along with this, it explore the relationship between diabetes markers (specifically, HbA1c, Urea, and Cr) and other health markers (namely, BMI and cholesterol levels), and how this relationship differs across different age and gender groups. This question is essential because understanding the correlation between these variables can help us identify potential risk factors for diabetes and other related health conditions. For example, we may find that individuals with high BMI and cholesterol levels have a higher risk of developing diabetes, and this risk is more significant in certain age or gender groups. By examining this relationship, we can better understand how diabetes and other health conditions may be linked and identify target populations that may require more targeted interventions to prevent or manage diabetes. Research Question 3 explores whether HbA1c levels vary between male and female individuals who have both obesity and diabetes. This question is important because HbA1c levels are a critical indicator of diabetes management, and understanding how this variable differs between genders can help healthcare providers tailor treatment plans for male and female patients. By analyzing the dataset and exploring the relationship between HbA1c levels, obesity, and gender, we can gain insights into how diabetes management may differ between male and female patients and develop more targeted interventions to improve patient outcomes.
+
+
+## Data Description
+The data set used for the purpose of this study is collected from the Iraqi society as the data were acquired from the laboratory of Medical City Hospital and (the Specializes Center for Endocrinology and Diabetes-Al-Kindy Teaching Hospital) of Diabetes. This diabetes database, is a collection of medical diagnostic reports of 1000 examples from a population. 
+The samples consist of examples with 13 attribute values and one of the three possible outcomes, namely whether the patient is tested positive for diabetes (indicated by output Y) or not (indicated by N) and is having prediabetes (indicated by P). This data set is analysed using R. 
+
+```{r}
+knitr::include_graphics("C:/Users/mayuc/Desktop/Term 2/Data Analysis/Project/Diabetes.png")
+```
+
+The obesity column in the dataset was created using the BMI variable. This column is essential for accurate data analysis as it allows for better understanding of the relationship between BMI and diabetes. By including this variable, the dataset can be analyzed more accurately, and potential risk factors for diabetes can be identified more effectively. 
+
+To maintain the consistency and accuracy in the dataset, the spaces in the Y and N values of a CLASS column were removed, and the modified values were stored back in the same column. This step ensures that the data is uniform and consistent for further analysis.
+
+```{r}
+library(tidyverse) 
+library(ggplot2)
+library(pacman)
+library(lattice)
+library(gridExtra)
+library(robust)
+library(ggpubr)
+pacman:: p_load(ggplot2,gridExtra,lattice,gridExtra,robust,ggpubr,caret)
+df = read.csv("C:/Users/mayuc/Desktop/Term 2/Data Analysis/Project/Diabetes.csv")
+df$CLASS[df$CLASS == "Y "] <- "Y"
+df$CLASS[df$CLASS == "N "] <- "N"
+ggplot(df, aes(x=reorder(CLASS, CLASS, function(x)-length(x)))) + geom_bar(fill='red') +  labs(x='CLASS')
+```
+
+Based on the above bar plots, it can be observed that the dataset primarily comprises patients with diabetes. Only a small number of patients, 100 to be exact, do not have diabetes, and around 50 patients are categorized as prediabetic. This suggests that the dataset is imbalanced and skewed towards patients with diabetes.
+
+```{r}
+ggplot(df, aes(x=reorder(Obesity, Obesity, function(x)-length(x)))) +
+geom_bar(fill='blue') +  labs(x='Obesity')
+```
+
+The bar plots suggest that there are more overweight patients in the dataset, with around 780 patients falling under this category. In contrast, only 220 patients are classified as having a normal weight.
+
+```{r}
+mosaicplot(CLASS~Obesity,data=df, color = "light blue")
+```
+
+It seems that the mosaic plot shows that there is a higher proportion of individuals with diabetes who are overweight or obese compared to those who are normal weight. Additionally, there may be a higher proportion of individuals who are normal weight but have prediabetes compared to those who are overweight or obese.It's important to note that while being overweight or obese can increase the risk of developing diabetes, not all overweight or obese individuals will develop diabetes, and there are many factors that can contribute to the development of diabetes. Similarly, while prediabetes can be an indicator of increased risk for developing diabetes, not all individuals with prediabetes will go on to develop the disease.  
+
+```{r}
+df$Gender[df$Gender == "f"] <- "F"
+mosaicplot(CLASS~Gender,data=df, color = "lightgreen")
+```
+
+It seems that the mosaic plot indicates that there are more males than females who have prediabetes and currently have diabetes. In contrast, there are more females than males who do not have diabetes. Additionally, the number of females who have prediabetes and currently have diabetes is lower than the number of males in these categories.
+
+```{r}
+ggplot(df, aes(x=factor(AGE), fill=CLASS))+ geom_bar(position="stack")+labs(x="Age", y="Count", fill = "CLASS")+ theme_classic() +ggtitle("AGE")
+```
+
+The bar plot indicates that the majority of patients with diabetes fall within the age range of 51 to 61 years.
+
+```{r}
+ggplot(data = df, mapping = aes(x = Chol, colour = Obesity)) +  geom_freqpoly(binwidth = 0.1)
+```
+
+It seems that a large proportion of patients with high cholesterol levels are overweight or obese, while the number of patients with normal weight and cholesterol levels is relatively low.
+
+Checking the distribution of the target:
+
+```{r}
+df$HbA1c <- as.numeric(df$HbA1c)
+# create a histogram of the target variable
+hist(df$HbA1c)
+
+# create a density plot of the target variable
+density(df$HbA1c)
+
+```
+The histogram represents a normally distributed target variable typically exhibits a symmetrical bell-shaped curve when visualized in a histogram or density plot.The curve is bell-shaped because the majority of the observations tend to cluster around the mean value, with fewer observations in the tails on either side. The standard deviation of the data determines the width of the curve, with a larger standard deviation resulting in a wider and flatter curve.Therefore, it can be concluded that the target variable follows a normal distribution. The mean value of HbA1c is 8.45, which is close to the median value of 8.45. The plot shows that the distribution of the HbA1c variable is right-skewed, with a long tail towards the higher values. This suggests that a significant proportion of the patients in the dataset have higher HbA1c levels, which may indicate poor blood sugar control and increased risk of complications associated with diabetes. 
+
+## Methods
+
+EXPLORATORY DATA ANALYSIS
+
+```{r}
+df = read.csv("C:/Users/mayuc/Desktop/Term 2/Data Analysis/Project/Diabetes.csv")
+str(df)
+summary(df)
+```
+The summary displays the minimum, maximum, mean, and quartile values for each variable. From the table, we can observe that the mean age of the patients is 53.53 and the mean BMI is 29.58, indicating that the patients are, on average, overweight. The mean HbA1c level is 8.281, which is higher than the recommended level for non-diabetic individuals. The median Chol level is 4.8, which is within the normal range. The variable "CLASS" indicates whether the patient is diagnosed with diabetes or not. The variable "Obesity" indicates whether the patient is obese or not.
+
+```{r}
+sapply(df, function(x) sum(is.na(x)))
+#cat("The number of null values or missing values in the dataset: ",count)
+```
+There are no missing values in the dataset.
+
+```{r}
+cat("The dupliates values in the No_Patient column \n")
+df$No_Pation[(duplicated(df$No_Pation))]
+sum(duplicated(df$No_Pation))
+```
+This implies that there are 39 cases where the No_Pation column contains the same values, which could cause problems in the analysis. To prevent such issues and the presence of duplicate values, I have chosen to remove this column from the dataset.
+
+```{r}
+df <- df[, -1]
+```
+
+Checking if there are any extreme values or observations that are significantly different from the other observations in the dataset.
+
+```{r}
+df %>%
+  select_if(is.numeric) %>%
+  pivot_longer(everything()) %>%
+  ggplot(aes(x = name, y = value)) +
+  geom_boxplot(width = 0.5) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.margin = unit(c(1, 1, 1, 1), "cm")) +
+  labs(title = "Boxplots of Numeric Columns",
+       x = "Column Name",
+       y = "Value")
+```
+
+Based on the above boxplot, it appears that the Cr feature has a larger number of outliers compared to the other variables. However, since this dataset represents clinical data, it is possible that these outliers may represent legitimate and extreme values for patients with rare medical conditions or severe complications. Therefore, it is not recommended to remove these observations during the analysis, as it may result in the loss of valuable information that could be useful for the analysis. 
+
+Since the "Class" variable is determined by the "Hb1Ac" levels which determine if a person has diabetes or not, it is not necessary to include it in the analysis. Hence, it can be removed from the dataset.
+
+```{r}
+df <- df[, -which(names(df) == "CLASS")]
+```
+
+
+Linear models, such as simple or multiple linear regression, are commonly used to analyze continuous target variables like HbA1c and to use as a initial step for the analysis because they are relatively simple to implement and interpret. Additionally, linear models assume that the relationship between the predictor variable(s) and the target variable is linear, which is often a reasonable assumption in many real-world situations.Another advantage of linear models is that they provide a clear and easily interpretable summary of the relationship between the predictor variable(s) and the target variable. Specifically, the coefficients in a linear regression model represent the expected change in the target variable for each one-unit increase in the predictor variable, holding all other variables constant. 
+
+```{r}
+model <- lm(HbA1c ~ ., data = df)
+summary(model)
+plot(model)
+```
+
+The "Coefficients" section shows the estimated regression coefficients for each independent variable. Each coefficient represents the change in the dependent variable associated with a one-unit change in the corresponding independent variable, holding all other variables constant.
+The "t value" and "Pr(>|t|)" columns provide information on the significance of each coefficient. The "t value" is the ratio of the estimated coefficient to its standard error, and the "Pr(>|t|)" column provides the associated p-value for a two-tailed test of the null hypothesis that the true coefficient is zero. For example, the coefficient for "GenderM" and "GenderF" has a p-value of 0.012445 and 0.018151, indicating that there is some evidence to suggest that the true coefficient is not zero.
+The "Multiple R-squared" and "Adjusted R-squared" values indicate the proportion of variance in the dependent variable that is explained by the independent variables in the model. In this case, the multiple R-squared is 0.4056, indicating that about 40.93% of the variance in HbA1c can be explained by the included independent variables. The adjusted R-squared is 0.4022, which takes into account the number of independent variables in the model.
+The "F-statistic" and associated p-value test the overall significance of the model. The F-statistic is a ratio of the explained variance to the unexplained variance, and the p-value provides the probability of observing an F-statistic as extreme or more extreme than the observed value under the null hypothesis that all the regression coefficients are zero. In this case, the F-statistic is 57, with a very low p-value (< 2.2e-16), indicating that the model as a whole is significant.
+
+Analysis of the Plots from Linear Model:
+
+The residual and fitted plot shows the relationship between the residuals and the fitted values. If there are clear clusters forming in this plot, it suggests that the relationship between the dependent variable and the independent variables is not linear. Instead, there may be some non-linear relationship or a grouping effect in the data.
+The scale-location plot is used to check the assumption of homoscedasticity, which means that the variance of the residuals is constant across the range of the independent variables. If there are clear clusters forming in this plot, it suggests that there may be some non-constant variance in the residuals, indicating that the assumption of homoscedasticity may not hold.
+The residual leverage plot shows the relationship between the leverage values and the standardized residuals. Leverage values are a measure of how far an observation is from the center of the independent variables. If there are data points on the left of the graph, it means that those observations have high leverage values, indicating that they have a large influence on the regression coefficients. This may be due to outliers, high leverage observations, or influential observations in the dataset.
+Based on the analysis presented above, it appears that the relationship between the variables is not linear, and therefore, non-linear models will need to be utilized in further analysis.
+
+
+GLM(Generalized Linear Models) are used when the assumptions of a linear regression model are violated or when the target variable is not normally distributed. A key advantage of GLMs is that they can accommodate a wide range of target variable distributions, including continuous, binary, count, and categorical variables.Another reason to use GLMs is when the relationship between the predictor variables and the target variable is not strictly linear. GLMs can use a range of link functions to model non-linear relationships between the predictor variables and the target variable.
+
+```{r}
+modelglm <-  glm(HbA1c ~ ., data = df, family=gaussian)
+summary(modelglm)
+plot(modelglm)
+# perform stepwise model selection using the AIC criterion
+step_model <- step(modelglm, trace = 0)
+# print the summary of the stepwise model
+summary(step_model)
+```
+
+The intercept (the expected value of HbA1c when all other variables are 0) is 4.744. The coefficients for GenderF and GenderM indicate that being female or male, respectively, is associated with a decrease in HbA1c levels. The coefficient for Urea indicates that an increase in Urea levels is associated with a decrease in HbA1c levels. Similarly, the coefficients for Chol and TG suggest that an increase in these variables is associated with an increase in HbA1c levels. The coefficient for Obesityoverweight/obese suggests that being overweight or obese is associated with an increase in HbA1c levels.
+
+After performing the stepwise AIC, all variables except BMI are statistically significant at the 0.05 significance level. The model explains a significant amount of the variance in HbA1c, as evidenced by the difference between the null and residual deviances. The final AIC value is 4190.6, indicating that the model provides a reasonably good fit to the data.
+
+If the assumption of normality and homoscedasticity is violated, one possible approach is to consider using a robust regression method, such as the Huber or Tukey biweight regression, which can reduce the influence of outliers on the model estimation.
+
+## Analysis
+Q1. Which variables are statistically significant predictors for the occurrence of diabetes in a patient?
+
+Since, the assumption of homoscedasticity is voliated GAM is used . GAMs, or Generalized Additive Models, are a type of regression model that can be used to model non-linear relationships between predictor variables and the target variable. They are an extension of GLMs and provide a more flexible framework for modeling complex relationships between variables.GAMs can model complex non-linear relationships between predictor variables and the target variable that may not be captured by linear or GLM models. By using smoothing functions, such as splines or generalized additive models, GAMs can capture complex patterns in the data. GAMs are less sensitive to outliers and model misspecification than other modeling techniques. The use of smoothing functions allows GAMs to smooth over small variations in the data, reducing the impact of outliers and noise.
+
+In a linear model, the relationship between the response variable and the predictor variables is assumed to be linear, which means that the slope of the line is constant. However, in many cases, this assumption may not hold, and the relationship may be better modeled using a non-linear function. GAMs allow for the inclusion of non-linear functions of the predictors in the model, without assuming a specific form for the relationship.
+
+```{r}
+library(mgcv)
+
+# Example formula
+my_formula <- df$HbA1c ~ s(df$Urea) + df$Gender + s(df$Chol) + s(df$TG) + s(df$BMI) + df$Obesity
+model <- gam(my_formula,data = df, family = gaussian(link = "identity"))
+
+# Check the summary
+summary(model)
+
+
+```
+
+The parametric coefficients table shows the estimated coefficients for the fixed effects, including the intercept and the effect of the Gender and Obesity variables. The results suggest that being male or female has a statistically significant effect on HbA1c levels, as does being overweight or obese.
+
+The approximate significance of smooth terms table shows the results of the smooth terms of the predictor variables. The results suggest that there is a non-linear relationship between HbA1c and Urea, Chol, and TG, while BMI does not have a significant non-linear relationship with HbA1c.
+
+The R-squared value of 0.405 indicates that the model explains about 40.5% of the variance in the response variable, while the Deviance explained of 41.2% shows the proportion of deviance in the response variable that is explained by the model. The GCV value of 3.868 is the generalized cross-validation score, which is an estimate of the predictive performance of the model.
+
+Overall, the results suggest that the model provides a reasonable fit to the data, although there is still a significant proportion of unexplained variance in the response variable.
+
+Hence, the statistically significant predictors for the occurrence of diabetes in a patient are gender, obesity, Urea, Chol, and TG. 
+
+Q2. What is the correlation between diabetes markers (HbA1c, Urea, Cr) and other health markers (BMI, cholesterol levels), and how does it differ across different age and gender groups?
+
+To determine the correlation between the diabetes markers (HbA1c, Urea, Cr) and other health markers (BMI, cholesterol levels) we will use the Pearson's correlation coefficient. Pearson's correlation` is a measure of the linear correlation between two continuous variables. It ranges from -1 to 1, where -1 indicates a perfect negative correlation, 0 indicates no correlation, and 1 indicates a perfect positive correlation. Scatter plots can be used to visualize the relationship between two continuous variables. If the relationship is linear, the data points will form a pattern that follows a line. If the relationship is non-linear, the data points will form a different pattern.
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(ggcorrplot)
+
+# Compute correlation matrix
+cor_matrix <- cor(df[, c("HbA1c", "Urea", "Cr", "BMI", "Chol", "TG", "HDL", "LDL", "VLDL")], method = "pearson")
+#round(cor_matrix, 2)
+# Visualize correlation matrix as a heatmap
+ggcorrplot(cor_matrix, type = "lower", lab = TRUE)
+
+# Visualize pairwise scatterplots
+ggplot(df, aes(x = df$HbA1c, y = df$BMI)) + 
+  geom_point() + 
+  facet_grid(. ~ df$Gender + cut(df$AGE, breaks = c(0, 30, 50, 70, 90))) + 
+  labs(x = "HbA1c", y = "BMI")
+
+ggplot(df, aes(x = df$HbA1c, y = df$Chol)) + 
+  geom_point() + 
+  facet_grid(. ~ df$Gender + cut(df$AGE, breaks = c(0, 30, 50, 70, 90))) + 
+  labs(x = "HbA1c", y = "Chol")
+
+ggplot(df, aes(x = df$Urea, y = df$BMI)) + 
+  geom_point() + 
+  facet_grid(. ~ df$Gender + cut(df$AGE, breaks = c(0, 30, 50, 70, 80))) + 
+  labs(x = "Urea", y = "BMI")
+
+ggplot(df, aes(x = df$Urea, y = df$Chol)) + 
+  geom_point() + 
+  facet_grid(. ~ df$Gender + cut(df$AGE, breaks = c(0, 30, 50, 70, 90))) + 
+  labs(x = "Urea", y = "Chol")
+```
+
+From heatmap, there is high correlation between Urea and Cr which is 0.62, BMI and HB1Ac is 0.41, 0.32 is in Chol and TG, 0.42 LDL and Chol.
+
+Based on the scatter plot of BMI and HbA1c with gender and age groups, it appears that there are more data points in the age group [50,70] for both males and females. This could suggest that this age group has a higher risk of developing diabetes or related health issues that affect BMI.On the other hand, the age groups [0,30] and [30,50] have fewer data points for females, which could mean that there may be lower prevalence of diabetes or related health issues in these age groups. However, for males, there are slightly more data points in the age group [30,50] than in [0,30], which may indicate a higher risk of diabetes or related health issues in this age group for males.
+
+The second scatterplot shows the relationship between two variables, Cholesterol (Chol) and Hemoglobin A1c (HbA1c), for both males and females in different age groups. It seems that more data points are clustered in the age group [50,70] for both males and females and lie between the cholesterol level of 2.5 - 7.5, while fewer data points lie in the cholesterol range of 7.5 -10.This may indicate that for this particular population, there is a trend towards lower cholesterol levels, especially in the middle-aged to older individuals. It could also suggest that a significant number of individuals in this population are managing their cholesterol levels through diet and lifestyle modifications, as opposed to medication.Furthermore, in the age group [30,50], it seems that male cholesterol levels are also clustered between 2.5 -7.5, while in females, a few data points lie above 7.5. This could suggest that there may be some gender-specific differences in how cholesterol is managed or affected by other factors in this age group. For instance, hormonal changes during menopause can affect lipid metabolism and contribute to higher cholesterol levels in women.
+
+The scatterplot between Body Mass Index (BMI) and Urea levels for individuals in different age groups, with a breakdown by gender. According to the information provided, most people in the age group [50,70] have a BMI range from 20 to 40 and urea level ranges from 1 - 20. Similarly, for the age group [30,50], the BMI ranges from 19 - 34 for both males and females, but the BMI range for males extends up to 47.5.The data suggests that, in general, there is a positive relationship between BMI and urea levels, meaning that as BMI increases, so does the level of urea. This is expected, as urea is a byproduct of protein metabolism and excess protein is often consumed with a higher BMI.Additionally, the trend of higher BMI in males compared to females is consistent with previous research, which has shown that males tend to have a higher muscle mass and thus a higher BMI compared to females. However, it's also important to note that BMI has limitations as a measure of body composition and doesn't distinguish between fat mass and lean mass.
+
+Q3 Does the HbA1c level vary between male and female individuals who have both obesity and diabetes?
+
+The Welch Two Sample t-test is a statistical test used to compare the means of two independent samples. It is a modified version of the Student's t-test that assumes unequal variances and sample sizes between the two groups being compared.The test is used to determine whether the difference in means between the two groups is statistically significant or due to chance. The null hypothesis assumes that there is no difference in means between the two groups, while the alternative hypothesis assumes that there is a significant difference in means.
+The test statistic for the Welch Two Sample t-test is calculated as:
+
+t = (x̄1 - x̄2) / sqrt((s1^2 / n1) + (s2^2 / n2))
+
+where x̄1 and x̄2 are the sample means, s1^2 and s2^2 are the sample variances, and n1 and n2 are the sample sizes for the two groups.
+The test statistic follows a t-distribution with degrees of freedom calculated using the Welch-Satterthwaite equation:
+df = ((s1^2 / n1) + (s2^2 / n2))^2 / ((s1^2 / n1)^2 / (n1 - 1) + (s2^2 / n2)^2 / (n2 - 1))
+The p-value for the test is calculated based on the t-statistic and the degrees of freedom. If the p-value is less than the significance level (usually set at 0.05), the null hypothesis is rejected and it is concluded that there is a statistically significant difference in means between the two groups.
+
+```{r}
+# Load the dataset
+df = read.csv("C:/Users/mayuc/Desktop/Term 2/Data Analysis/Project/Diabetes.csv")
+df$Gender[df$Gender == "f"] <- "F"
+# Filter the dataset to include only individuals with obesity and diabetes
+obese_diabetes <- df %>% filter(Obesity == "overweight/obese" & CLASS == "Y")
+
+# Calculate the mean HbA1c levels for males and females separately
+male_hba1c <- obese_diabetes %>% filter(Gender == "M") %>% summarise(mean_hba1c = mean(HbA1c))
+female_hba1c <- obese_diabetes %>% filter(Gender == "F") %>% summarise(mean_hba1c = mean(HbA1c))
+
+# Conduct a t-test to determine if the mean HbA1c levels differ significantly between males and females
+t.test(obese_diabetes$HbA1c ~ obese_diabetes$Gender)
+
+```
+Based on the Welch Two Sample t-test, the mean HbA1c level of females with obesity and diabetes (9.42) is significantly higher (p-value = 0.0011) than that of males (8.90). The 95% confidence interval of the difference in means ranges from 0.210 to 0.843, suggesting that the true difference in means between the two groups falls within this interval with 95% confidence.
+
+Therefore, we can conclude that there is a statistically significant difference in HbA1c levels between males and females with obesity and diabetes, with females having higher HbA1c levels.
+
+
+## Results
+The analysis carried out has revealed some important findings regarding the occurrence of diabetes in patients.
+Plots generated after running the GAM model.
+
+```{r}
+# Plot the graph
+plot(model)
+```
+
+The statistical analysis has identified certain predictors that are significantly associated with diabetes, which include gender, obesity, Urea, Chol, and TG.
+In addition, the study has also shown that there is a strong correlation between certain variables, such as Urea and Cr, BMI and Hb1Ac, Chol and TG, and LDL and Chol.
+Based on these results, we can come at a point that there are some significant differences in the HbA1c levels between males and females with obesity and diabetes, with females exhibiting higher HbA1c levels. These findings suggest that the identified predictors and correlations should be taken into account when evaluating the risk of diabetes and developing interventions to prevent or manage the condition.
+
+## Conclusions
+In conclusion, this analysis has provided valuable insights into the predictors and correlations associated with diabetes in patients. The results indicate that factors such as gender, obesity, Urea, Chol, and TG are significantly associated with the occurrence of diabetes. Moreover, the study has identified strong correlations between certain variables, which can further inform the management of diabetes.The finding that females with obesity and diabetes exhibit higher HbA1c levels than males highlights the importance of taking gender into account when assessing the risk of diabetes and designing interventions to manage the condition. Overall, these findings can help healthcare professionals develop more effective strategies to prevent and manage diabetes, which is a significant public health concern worldwide.
+
+## Reference
+1. https://www.emerald.com/insight/content/doi/10.1016/j.aci.2018.12.004/full/html
+2. https://www.who.int/health-topics/diabetes#tab=tab_1
+3. http://www.ijpam.eu
+4. Sisodia, D., & Sisodia, D. S. (2018). Prediction of Diabetes using Classification Algorithms. Procedia Computer Science, 132, 1578–1585. https://doi.org/10.1016/j.procs.2018.05.122
+5. Classification and Diagnosis of Diabetes Mellitus and Other Categories of Glucose Intolerance. (1979). Diabetes, 28(12), 1039–1057. https://doi.org/10.2337/diab.28.12.1039
+6. Petersmann, A., Müller-Wieland, D., Müller, U., Landgraf, R., Nauck, M., Freckmann, G., Heinemann, L., & Schleicher, E. (2019). Definition, Classification and Diagnosis of Diabetes Mellitus. Experimental and Clinical Endocrinology & Diabetes, 127(S 01), S1–S7. https://doi.org/10.1055/a-1018-9078
+7. https://www.datamentor.io/r-programming/
